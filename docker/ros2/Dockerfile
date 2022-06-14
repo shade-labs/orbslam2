@@ -50,7 +50,7 @@ ENV HOME /root
 WORKDIR $HOME
 
 # get orbslam sources
-RUN git clone https://github.com/open-shade/orbslam2-ros2-wrapper.git ORB_SLAM2
+RUN git clone https://github.com/open-shade/orbslam2.git ORB_SLAM2
 
 # install orbslam depenendencies
 RUN apt-get install -y \
