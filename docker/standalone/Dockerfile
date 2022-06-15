@@ -1,5 +1,5 @@
-FROM ros:foxy
-LABEL AUTHOR='Brandon Fan'
+FROM ubuntu:focal
+LABEL AUTHOR='Emerson Dove'
 
 # working directory
 ENV HOME /root
@@ -11,17 +11,19 @@ ENV NVIDIA_VISIBLE_DEVICES \
 ENV NVIDIA_DRIVER_CAPABILITIES \
     ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
 
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" TZ="America/New_York" apt-get install -y tzdata
+
 # general utilities
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
     git \
-    vim \
-    nano \
     python-dev \
-    python3-pip
+    python3-pip \
+    sudo \
+    cmake
 
-RUN sudo apt-get install libeigen3-dev
+RUN DEBIAN_FRONTEND="noninteractive" TZ="America/New_York" apt-get install libeigen3-dev -y
 
 # pip
 RUN pip3 install --upgrade pip
@@ -62,39 +64,3 @@ WORKDIR $HOME/ORB_SLAM2
 RUN chmod +x $HOME/ORB_SLAM2/build.sh
 RUN /bin/bash -c 'export LD_LIBRARY_PATH=~/Pangolin/build/src/:$LD_LIBRARY_PATH; \
   bash $HOME/ORB_SLAM2/build.sh'
-
-# create a ros2 workspace
-RUN mkdir -p $HOME/ws/src
-WORKDIR $HOME/ws
-
-# get some dependencies
-RUN apt-get install -y libcanberra-gtk-module libboost-all-dev
-RUN pip install numpy
-
-# get source code
-RUN git clone https://github.com/alsora/ros2-ORB_SLAM2 src/ros2-ORB_SLAM2
-RUN git clone -b ros2 https://github.com/ros-perception/vision_opencv.git src/vision_opencv
-
-# build the workspace
-RUN  bash -c 'source /opt/ros/foxy/setup.bash && \
-  export LDFLAGS="-Wl,--copy-dt-needed-entries" && \
-  export ORB_SLAM2_ROOT_DIR=~/ORB_SLAM2 && \
-  colcon build --symlink-install'
-
-#### SET ENVIRONMENT
-
-WORKDIR $HOME
-
-# Source ROS workspaces when opening new terminal
-RUN echo ' \n\
-echo "Sourcing ROS2 packages..." \n\
-source /opt/ros/foxy/setup.bash \n\
-source $HOME/ws/install/local_setup.sh' >> $HOME/.bashrc
-
-# Set ORB_SLAM2_ROOT_DIR
-RUN echo ' \n\
-export ORB_SLAM2_ROOT_DIR=~/ORB_SLAM2' >> $HOME/.bashrc
-
-# add orbslam shared libraries to path
-RUN echo ' \n\
-export LD_LIBRARY_PATH=~/Pangolin/build/src/:~/ORB_SLAM2/Thirdparty/DBoW2/lib:~/ORB_SLAM2/Thirdparty/g2o/lib:~/ORB_SLAM2/lib:$LD_LIBRARY_PATH' >> $HOME/.bashrc
