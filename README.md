@@ -14,9 +14,41 @@ Pull our prebuilt docker images (built on intel processor x86_64):
 
 `docker pull shaderobotics/orbslam2-ros2:latest`
 
+Make sure to run the image using this command (or bash script ):
+
+```bash
+XSOCK=/tmp/.X11-unix
+
+# --runtime=nvidia \
+docker run -it --rm \
+ -e DISPLAY=$DISPLAY \
+ -v $XSOCK:$XSOCK \
+ -v $HOME/.Xauthority:/root/.Xauthority \
+ --privileged \
+ --net=host \
+ shaderobotics/orbslam2-ros2
+```
+
+The image currently defaults to running the mono example with the `TUM1` settings.
+
 ### Standalone
 
-`docker pull shaderobotics/orbslam2:latest`
+`docker pull shaderobotics/orbslam2-standalone:latest`
+
+Make sure to run the image using this command (or bash script ):
+
+```bash
+XSOCK=/tmp/.X11-unix
+
+# --runtime=nvidia \
+docker run -it --rm \
+ -e DISPLAY=$DISPLAY \
+ -v $XSOCK:$XSOCK \
+ -v $HOME/.Xauthority:/root/.Xauthority \
+ --privileged \
+ --net=host \
+ shaderobotics/orbslam2-standalone
+```
 
 ## Native
 

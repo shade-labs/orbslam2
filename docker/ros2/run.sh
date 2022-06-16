@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # @author Alberto Soragna (alberto dot soragna at gmail dot com)
+# Modified by Emerson Dove
 # @2018
 
 XSOCK=/tmp/.X11-unix
@@ -12,4 +13,4 @@ docker run -it --rm \
  -v $HOME/.Xauthority:/root/.Xauthority \
  --privileged \
  --net=host \
- ros2_orbslam2 "$@"
+ shaderobotics/orbslam2-ros2

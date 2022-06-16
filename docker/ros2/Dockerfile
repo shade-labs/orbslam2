@@ -1,6 +1,10 @@
 FROM ros:foxy
 LABEL AUTHOR='Brandon Fan'
 
+ARG VOC_PATH="./Vocabulary/ORBvoc.txt"
+ARG SETTINGS_PATH="../ws/src/ros2-ORB_SLAM2/src/monocular/TUM1.yaml"
+ARG ALGO_TYPE="mono"
+
 # working directory
 ENV HOME /root
 WORKDIR $HOME
@@ -98,3 +102,13 @@ export ORB_SLAM2_ROOT_DIR=~/ORB_SLAM2' >> $HOME/.bashrc
 # add orbslam shared libraries to path
 RUN echo ' \n\
 export LD_LIBRARY_PATH=~/Pangolin/build/src/:~/ORB_SLAM2/Thirdparty/DBoW2/lib:~/ORB_SLAM2/Thirdparty/g2o/lib:~/ORB_SLAM2/lib:$LD_LIBRARY_PATH' >> $HOME/.bashrc
+
+WORKDIR $HOME/ORB_SLAM2
+
+ENV VOC_PATH=$VOC_PATH
+ENV SETTINGS_PATH=$SETTINGS_PATH
+ENV ALGO_TYPE=$ALGO_TYPE
+
+SHELL ["/bin/bash", "-c"]
+
+CMD ["/bin/bash", "-c", "source /opt/ros/foxy/setup.bash && source ../ws/install/local_setup.sh && ros2 run ros2_orbslam mono ./Vocabulary/ORBvoc.txt ../ws/src/ros2-ORB_SLAM2/src/monocular/TUM1.yaml"]
