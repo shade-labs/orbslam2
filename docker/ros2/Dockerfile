@@ -1,13 +1,7 @@
-FROM ros:foxy
+ARG ROS_DISTRO=foxy
+
+FROM ros:$ROS_DISTRO
 LABEL AUTHOR='Brandon Fan'
-
-ARG VOC_PATH="./Vocabulary/ORBvoc.txt"
-ARG SETTINGS_PATH="../ws/src/ros2-ORB_SLAM2/src/monocular/TUM1.yaml"
-ARG ALGO_TYPE="mono"
-
-# working directory
-ENV HOME /root
-WORKDIR $HOME
 
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES \
@@ -15,100 +9,76 @@ ENV NVIDIA_VISIBLE_DEVICES \
 ENV NVIDIA_DRIVER_CAPABILITIES \
     ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
 
-# general utilities
-RUN apt-get update && apt-get install -y \
+
+# install deps
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y \
     wget \
     curl \
     git \
     vim \
     nano \
     python-dev \
-    python3-pip
+    python3-pip \
+    libeigen3-dev \
+    libopencv-dev \
+    opencv-data \
+    libglew-dev \
+    ffmpeg \
+    libboost-system-dev \
+    libcanberra-gtk-module libboost-all-dev
 
-RUN sudo apt-get install libeigen3-dev
+# pip dependencies
+RUN pip3 install --upgrade \
+    pip \
+    numpy
 
-# pip
-RUN pip3 install --upgrade pip
+# pangolin
+WORKDIR /usr/src/pangolin
+RUN git clone https://github.com/stevenlovegrove/Pangolin.git && \
+    cd Pangolin && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    cmake --build .
 
-WORKDIR $HOME
+# orbslam
+WORKDIR /usr/src/orbslam2
+RUN git clone https://github.com/open-shade/orbslam2.git ORB_SLAM2 && \
+    cd ORB_SLAM2 && \
+    LD_LIBRARY_PATH=/usr/src/pangolin/Pangolin/build/src/:$LD_LIBRARY_PATH bash build.sh
 
-# install pangolin depenendencies
-RUN apt-get update && apt-get install -y \
-  libopencv-dev opencv-data \
-  libglew-dev \
-  ffmpeg
+# orbslam 2 realsense config files
+WORKDIR /usr/src/realsense2-orbslam2
+RUN git clone https://github.com/NERanger/ORB-SLAM2-with-D435i.git ORB_SLAM2 && \
+    cd ORB_SLAM2 && \
+    tar xf Vocabulary/ORBvoc.txt.tar.gz
+    
 
-# get pangolin sources
-RUN git clone https://github.com/stevenlovegrove/Pangolin.git
-RUN mkdir -p $HOME/Pangolin/build
-WORKDIR $HOME/Pangolin/build
+# ros
+WORKDIR /usr/src/ros_ws
+RUN git clone https://github.com/alsora/ros2-ORB_SLAM2 src/ros2-ORB_SLAM2 && \
+    git clone -b ros2 https://github.com/ros-perception/vision_opencv.git src/vision_opencv && \
+    bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash && \
+        export LDFLAGS="-Wl,--copy-dt-needed-entries" && \
+        export ORB_SLAM2_ROOT_DIR=/usr/src/orbslam2/ORB_SLAM2 && \
+        colcon build --symlink-install'
 
-# build pangolin
-RUN cmake ..
-RUN cmake --build .
-
-WORKDIR $HOME
-
-# working directory
-ENV HOME /root
-WORKDIR $HOME
-
-# get orbslam sources
-RUN git clone https://github.com/open-shade/orbslam2.git ORB_SLAM2
-
-# install orbslam depenendencies
-RUN apt-get install -y \
-  libboost-system-dev
-
-# build orbslam
-WORKDIR $HOME/ORB_SLAM2
-# Note, you might have to change build.sh to be make -j1 at the end depending on your memory constraints
-RUN chmod +x $HOME/ORB_SLAM2/build.sh
-RUN /bin/bash -c 'export LD_LIBRARY_PATH=~/Pangolin/build/src/:$LD_LIBRARY_PATH; \
-  bash $HOME/ORB_SLAM2/build.sh'
-
-# create a ros2 workspace
-RUN mkdir -p $HOME/ws/src
-WORKDIR $HOME/ws
-
-# get some dependencies
-RUN apt-get install -y libcanberra-gtk-module libboost-all-dev
-RUN pip install numpy
-
-# get source code
-RUN git clone https://github.com/alsora/ros2-ORB_SLAM2 src/ros2-ORB_SLAM2
-RUN git clone -b ros2 https://github.com/ros-perception/vision_opencv.git src/vision_opencv
-
-# build the workspace
-RUN  bash -c 'source /opt/ros/foxy/setup.bash && \
-  export LDFLAGS="-Wl,--copy-dt-needed-entries" && \
-  export ORB_SLAM2_ROOT_DIR=~/ORB_SLAM2 && \
-  colcon build --symlink-install'
-
-#### SET ENVIRONMENT
-
-WORKDIR $HOME
+WORKDIR /root
 
 # Source ROS workspaces when opening new terminal
-RUN echo ' \n\
-echo "Sourcing ROS2 packages..." \n\
-source /opt/ros/foxy/setup.bash \n\
-source $HOME/ws/install/local_setup.sh' >> $HOME/.bashrc
+RUN echo 'source /opt/ros/$ROS_DISTRO/setup.bash' >> .bashrc && \
+	echo 'source /usr/src/ros_ws/install/setup.bash' >> .bashrc && \
+	echo 'export ORB_SLAM2_ROOT_DIR=/usr/src/orbslam2/ORB_SLAM2' >> .bashrc && \
+	echo 'export LD_LIBRARY_PATH=~/usr/src/pangolin/Pangolin/build/src/:/usr/src/orbslam2/ORB_SLAM2/Thirdparty/DBoW2/lib:/usr/src/orbslam2/ORB_SLAM2/Thirdparty/g2o/lib:/usr/src/orbslam2/ORB_SLAM2/lib:$LD_LIBRARY_PATH' >> .bashrc
 
-# Set ORB_SLAM2_ROOT_DIR
-RUN echo ' \n\
-export ORB_SLAM2_ROOT_DIR=~/ORB_SLAM2' >> $HOME/.bashrc
+RUN echo '#!/bin/bash -i' >> run.sh && \
+	echo 'ros2 run ros2_orbslam rgbd \' >> run.sh && \
+   	echo '    /usr/src/realsense2-orbslam2/ORB_SLAM2/ORBvoc.txt \' >> run.sh && \
+   	echo '    /usr/src/realsense2-orbslam2/ORB_SLAM2/Examples/RGB-D/d435i.yaml \' >> run.sh && \
+   	echo '    --ros-args -r /camera/rgb:=/camera/color/image_raw \' >> run.sh && \
+   	echo '    -r /camera/depth:=/camera/depth/image_rect_raw' >> run.sh && \
+	chmod +x ~/run.sh
 
-# add orbslam shared libraries to path
-RUN echo ' \n\
-export LD_LIBRARY_PATH=~/Pangolin/build/src/:~/ORB_SLAM2/Thirdparty/DBoW2/lib:~/ORB_SLAM2/Thirdparty/g2o/lib:~/ORB_SLAM2/lib:$LD_LIBRARY_PATH' >> $HOME/.bashrc
-
-WORKDIR $HOME/ORB_SLAM2
-
-ENV VOC_PATH=$VOC_PATH
-ENV SETTINGS_PATH=$SETTINGS_PATH
-ENV ALGO_TYPE=$ALGO_TYPE
-
-SHELL ["/bin/bash", "-c"]
-
-CMD ["/bin/bash", "-c", "source /opt/ros/foxy/setup.bash && source ../ws/install/local_setup.sh && ros2 run ros2_orbslam $ALGO_TYPE $VOC_PATH $SETTINGS_PATH"]
+CMD ["./run.sh"]

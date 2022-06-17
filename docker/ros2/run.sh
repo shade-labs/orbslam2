@@ -1,16 +1,14 @@
 #!/bin/bash
-#
-# @author Alberto Soragna (alberto dot soragna at gmail dot com)
-# Modified by Emerson Dove
-# @2018
 
-XSOCK=/tmp/.X11-unix
+DOCKER_BUILDKIT=1 docker build -t shaderobotics/orbslam2-ros2 .
 
-# --runtime=nvidia \
+export DISPLAY=:0.0
+xhost +local:docker
+
 docker run -it --rm \
- -e DISPLAY=$DISPLAY \
- -v $XSOCK:$XSOCK \
- -v $HOME/.Xauthority:/root/.Xauthority \
- --privileged \
- --net=host \
- shaderobotics/orbslam2-ros2
+  -v /dev/shm:/dev/shm \
+  --env="DISPLAY" \
+  --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
+  --privileged \
+  --net=host \
+  shaderobotics/orbslam2-ros2 $@
