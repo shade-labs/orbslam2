@@ -111,4 +111,4 @@ ENV ALGO_TYPE=$ALGO_TYPE
 
 SHELL ["/bin/bash", "-c"]
 
-CMD ["/bin/bash", "-c", "source /opt/ros/foxy/setup.bash && source ../ws/install/local_setup.sh && ros2 run ros2_orbslam mono ./Vocabulary/ORBvoc.txt ../ws/src/ros2-ORB_SLAM2/src/monocular/TUM1.yaml"]
+CMD ["/bin/bash", "-c", "source /opt/ros/foxy/setup.bash && source ../ws/install/local_setup.sh && ros2 run ros2_orbslam $ALGO_TYPE $VOC_PATH $SETTINGS_PATH"]

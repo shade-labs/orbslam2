@@ -29,7 +29,7 @@ docker run -it --rm \
  shaderobotics/orbslam2-ros2
 ```
 
-The image currently defaults to running the mono example with the `TUM1` settings.
+The image currently defaults to running the mono example with the `TUM1` settings. The instructions to change that are below.
 
 ### Standalone
 
@@ -50,9 +50,21 @@ docker run -it --rm \
  shaderobotics/orbslam2-standalone
 ```
 
+The image currently defaults to running the mono example with the `TUM1` settings. The instructions to change that are below.
+
 ## Native
 
 No guide available yet. Follow the commands inside the Dockerfiles (`/docker/ros2` or `/docker/standalone`). These will run on Ubuntu 20.04. 
+
+## Changing The Algorithm/Settings
+
+The image currently defaults to running the mono example with the `TUM1.yaml` settings. To change these, modify the environment variables 
+
+- `VOC_PATH` (vocabulary path), 
+- `SETTINGS_PATH` (path to .yaml settings)
+- `ALGO_TYPE` (things like `mono` or `RGB-D`)
+
+This can be accomplished by changing the values and rebuilding the container at the top of the file `/docker/ros2/Dockerfile` (for ROS builds) and the `standalone` folder for non-ros builds.
 
 # Original Credits
 
